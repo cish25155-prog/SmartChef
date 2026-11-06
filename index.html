@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI献立スマートシェフ</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- PyScript CSS & JS -->
+  <link rel="stylesheet" href="https://pyscript.net/releases/2023.05.1/pyscript.css" />
+  <script defer src="https://pyscript.net/releases/2023.05.1/pyscript.js"></script>
+
+  <!-- JS Wrappers for PyScript functions -->
+  <script>
+    window.pyUpdateGenreRatio = function(genre) { if (window._pyUpdateGenreRatio) window._pyUpdateGenreRatio(genre); };
+    window.pyGeneratePlan = function() { if (window._pyGeneratePlan) window._pyGeneratePlan(); };
+    window.pySwitchTab = function(tab) { if (window._pySwitchTab) window._pySwitchTab(tab); };
+    window.pyResetGenreRatios = function() { if (window._pyResetGenreRatios) window._pyResetGenreRatios(); };
+    window.pyChangeSingleItem = function(idx, cat) { if (window._pyChangeSingleItem) window._pyChangeSingleItem(idx, cat); };
+    window.pyToggleHideItem = function(idx, cat) { if (window._pyToggleHideItem) window._pyToggleHideItem(idx, cat); };
+    window.pyRenderShoppingList = function() { if (window._pyRenderShoppingList) window._pyRenderShoppingList(); };
+    window.pyToggleCheckIngredient = function(key) { if (window._pyToggleCheckIngredient) window._pyToggleCheckIngredient(key); };
+    window.pyCopyShoppingList = function() { if (window._pyCopyShoppingList) window._pyCopyShoppingList(); };
+    window.pyRenderPlan = function() { if (window._pyRenderPlan) window._pyRenderPlan(); };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #f8fafc;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+          <i class="fa-solid fa-utensils text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-lg sm:text-xl text-slate-900 leading-tight">献立スマートシェフ</h1>
+          <p class="text-[10px] sm:text-xs text-slate-500 font-medium">栄養・時間・食材を最適化する献立自動作成アプリ</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Python Engine Active (PyScript)
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="app-content" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- LEFT COLUMN: Control Panel Form -->
+      <aside class="lg:col-span-4 space-y-6">
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 sticky top-24 max-h-[85vh] overflow-y-auto custom-scrollbar">
+          <h2 class="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-emerald-600"></i>
+            条件を設定して作成
+          </h2>
+
+          <form id="menu-form" onsubmit="event.preventDefault(); window.pyGeneratePlan();" class="space-y-5">
+            
+            <!-- Days & Servings -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="days" class="block text-xs font-bold text-slate-700 mb-1.5">
+                  <i class="fa-regular fa-calendar-days text-slate-400 mr-1"></i>日数
+                </label>
+                <select id="days" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl px-3 py-2.5 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                  <option value="1">1 日分</option>
+                  <option value="3" selected>3 日分</option>
+                  <option value="5">5 日分</option>
+                  <option value="7">7 日分 (1週間)</option>
+                </select>
+              </div>
+              <div>
+                <label for="servings" class="block text-xs font-bold text-slate-700 mb-1.5">
+                  <i class="fa-solid fa-users text-slate-400 mr-1"></i>人数
+                </label>
+                <select id="servings" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl px-3 py-2.5 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                  <option value="1">1 人分</option>
+                  <option value="2" selected>2 人分</option>
+                  <option value="3">3 人分</option>
+                  <option value="4">4 人分</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Mood Tag Selector -->
+            <div>
+              <label for="mood-tag" class="block text-xs font-bold text-slate-700 mb-1.5">
+                <i class="fa-solid fa-face-smile text-amber-500 mr-1"></i>今日の気分（優先タグ）
+              </label>
+              <select id="mood-tag" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl px-3 py-2.5 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                <option value="all" selected>指定なし（バランス重視）</option>
+                <option value="さっぱり">さっぱり系で軽やかに</option>
+                <option value="ガッツリ">ガッツリ系でスタミナ満点</option>
+                <option value="時短">時短重視で手早く作成</option>
+                <option value="定番">定番・安心の家庭料理</option>
+              </select>
+              <p class="text-[11px] text-slate-400 mt-1">※指定された気分の料理が献立内に優先して組み込まれます</p>
+            </div>
+
+            <!-- Food Preference Accordions -->
+            <details class="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden text-xs" open>
+              <summary class="p-3 font-bold text-slate-700 cursor-pointer flex justify-between items-center select-none hover:bg-slate-100 transition">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-heart-crack text-rose-500"></i> 食材の好み・NG設定</span>
+                <i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i>
+              </summary>
+
+              <div class="p-3 pt-2 space-y-3 border-t border-slate-200/60 bg-white">
+                
+                <!-- 反映選択スイッチ -->
+                <div class="pb-2 border-b border-slate-100">
+                  <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                    <input type="checkbox" id="use-ingredient-pref" checked onchange="window.pyRenderPlan()" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                    <span>この設定を献立に反映する</span>
+                  </label>
+                </div>
+
+                <!-- 1. 肉類 accordion -->
+                <details class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden" open>
+                  <summary class="p-2.5 font-extrabold text-slate-700 cursor-pointer flex justify-between items-center select-none hover:bg-slate-100 transition text-[11px]">
+                    <span class="flex items-center gap-1.5 text-slate-700"><i class="fa-solid fa-drumstick-bite text-slate-500"></i> 肉類</span>
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-[9px]"></i>
+                  </summary>
+                  <div class="p-2.5 pt-1 space-y-2 border-t border-slate-200/60 bg-white chip-group-container">
+                    <div>
+                      <span class="block text-[10px] font-bold text-emerald-700 mb-1"><i class="fa-solid fa-heart text-emerald-500 mr-1"></i>優先（好き）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="鶏" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">鶏肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="豚" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">豚肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="牛" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">牛肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ひき肉" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ひき肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ウインナー" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ウインナー</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="レバー" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">レバー</button>
+                      </div>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] font-bold text-rose-700 mb-1"><i class="fa-solid fa-ban text-rose-500 mr-1"></i>除外（NG）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="鶏" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">鶏肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="豚" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">豚肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="牛" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">牛肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ひき肉" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ひき肉</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ウインナー" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ウインナー</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="レバー" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">レバー</button>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <!-- 2. 魚介類 accordion -->
+                <details class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                  <summary class="p-2.5 font-extrabold text-slate-700 cursor-pointer flex justify-between items-center select-none hover:bg-slate-100 transition text-[11px]">
+                    <span class="flex items-center gap-1.5 text-slate-700"><i class="fa-solid fa-fish text-slate-500"></i> 魚介類</span>
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-[9px]"></i>
+                  </summary>
+                  <div class="p-2.5 pt-1 space-y-2 border-t border-slate-200/60 bg-white chip-group-container">
+                    <div>
+                      <span class="block text-[10px] font-bold text-emerald-700 mb-1"><i class="fa-solid fa-heart text-emerald-500 mr-1"></i>優先（好き）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="鮭" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">鮭</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ぶり" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ぶり</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="鯖" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">鯖</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="アジ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">アジ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="エビ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">エビ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="あさり" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">あさり</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ツナ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ツナ</button>
+                      </div>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] font-bold text-rose-700 mb-1"><i class="fa-solid fa-ban text-rose-500 mr-1"></i>除外（NG）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="鮭" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">鮭</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ぶり" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ぶり</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="鯖" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">鯖</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="アジ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">アジ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="エビ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">エビ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="あさり" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">あさり</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ツナ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ツナ</button>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <!-- 3. 野菜・きのこ・薬味 accordion -->
+                <details class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                  <summary class="p-2.5 font-extrabold text-slate-700 cursor-pointer flex justify-between items-center select-none hover:bg-slate-100 transition text-[11px]">
+                    <span class="flex items-center gap-1.5 text-slate-700"><i class="fa-solid fa-carrot text-slate-500"></i> 野菜・きのこ・薬味</span>
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-[9px]"></i>
+                  </summary>
+                  <div class="p-2.5 pt-1 space-y-2 border-t border-slate-200/60 bg-white chip-group-container">
+                    <div>
+                      <span class="block text-[10px] font-bold text-emerald-700 mb-1"><i class="fa-solid fa-heart text-emerald-500 mr-1"></i>優先（好き）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="トマト" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">トマト</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="なす" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">なす</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ブロッコリー" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ブロッコリー</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="キャベツ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">キャベツ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="じゃがいも" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">じゃがいも</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="大根" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">大根</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="人参" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">人参</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ピーマン" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ピーマン</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="しめじ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">きのこ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ゴーヤー" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ゴーヤー</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ニラ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ニラ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="みょうが" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">みょうが</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="パクチー" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">パクチー</button>
+                      </div>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] font-bold text-rose-700 mb-1"><i class="fa-solid fa-ban text-rose-500 mr-1"></i>除外（NG）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="トマト" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">トマト</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="なす" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">なす</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ブロッコリー" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ブロッコリー</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="キャベツ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">キャベツ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="じゃがいも" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">じゃがいも</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="大根" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">大根</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="人参" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">人参</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ピーマン" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ピーマン</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="しめじ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">きのこ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ゴーヤー" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ゴーヤー</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ニラ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ニラ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="みょうが" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">みょうが</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="パクチー" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">パクチー</button>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+                <!-- 4. 豆腐・卵・その他 accordion -->
+                <details class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                  <summary class="p-2.5 font-extrabold text-slate-700 cursor-pointer flex justify-between items-center select-none hover:bg-slate-100 transition text-[11px]">
+                    <span class="flex items-center gap-1.5 text-slate-700"><i class="fa-solid fa-egg text-slate-500"></i> 豆腐・卵・その他</span>
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-[9px]"></i>
+                  </summary>
+                  <div class="p-2.5 pt-1 space-y-2 border-t border-slate-200/60 bg-white chip-group-container">
+                    <div>
+                      <span class="block text-[10px] font-bold text-emerald-700 mb-1"><i class="fa-solid fa-heart text-emerald-500 mr-1"></i>優先（好き）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="豆腐" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">豆腐</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="卵" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">卵</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="チーズ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">チーズ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="キムチ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">キムチ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="納豆" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">納豆</button>
+                        <button type="button" onclick="window.toggleChip(this, 'preferred')" data-name="ココナッツ" class="chip-item chip-preferred px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ココナッツ</button>
+                      </div>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] font-bold text-rose-700 mb-1"><i class="fa-solid fa-ban text-rose-500 mr-1"></i>除外（NG）</span>
+                      <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="豆腐" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">豆腐</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="卵" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">卵</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="チーズ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">チーズ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="キムチ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">キムチ</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="納豆" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">納豆</button>
+                        <button type="button" onclick="window.toggleChip(this, 'disliked')" data-name="ココナッツ" class="chip-item chip-disliked px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px]">ココナッツ</button>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+
+              </div>
+            </details>
+
+            <!-- Genre Ratios -->
+            <div class="space-y-3 pt-2 border-t border-slate-100">
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                  <input type="checkbox" id="use-genre-ratio" checked onchange="window.pyRenderPlan()" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                  <span>ジャンル割合を献立に反映する</span>
+                </label>
+                <button type="button" onclick="window.pyResetGenreRatios()" class="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">均等に戻す</button>
+              </div>
+
+              <!-- Ratio Sliders -->
+              <div class="space-y-2 text-xs">
+                <!-- 和食 slider -->
+                <div class="p-2.5 bg-emerald-50/70 border border-emerald-100 rounded-xl space-y-1.5">
+                  <div class="flex justify-between font-extrabold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>和食</span>
+                    <span id="ratio-japanese-val" class="font-black text-emerald-700">40%</span>
+                  </div>
+                  <input type="range" id="ratio-japanese" min="0" max="100" value="40" oninput="window.pyUpdateGenreRatio('japanese')" class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-emerald-200/80 rounded-lg">
+                </div>
+                <!-- 洋食 slider -->
+                <div class="p-2.5 bg-amber-50/70 border border-amber-100 rounded-xl space-y-1.5">
+                  <div class="flex justify-between font-extrabold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>洋食</span>
+                    <span id="ratio-western-val" class="font-black text-amber-700">30%</span>
+                  </div>
+                  <input type="range" id="ratio-western" min="0" max="100" value="30" oninput="window.pyUpdateGenreRatio('western')" class="w-full accent-amber-500 cursor-pointer h-1.5 bg-amber-200/80 rounded-lg">
+                </div>
+                <!-- 中華 slider -->
+                <div class="p-2.5 bg-rose-50/70 border border-rose-100 rounded-xl space-y-1.5">
+                  <div class="flex justify-between font-extrabold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>中華</span>
+                    <span id="ratio-chinese-val" class="font-black text-rose-700">20%</span>
+                  </div>
+                  <input type="range" id="ratio-chinese" min="0" max="100" value="20" oninput="window.pyUpdateGenreRatio('chinese')" class="w-full accent-rose-500 cursor-pointer h-1.5 bg-rose-200/80 rounded-lg">
+                </div>
+                <!-- エスニック slider -->
+                <div class="p-2.5 bg-teal-50/70 border border-teal-100 rounded-xl space-y-1.5">
+                  <div class="flex justify-between font-extrabold text-slate-700">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-teal-500"></span>エスニック</span>
+                    <span id="ratio-ethnic-val" class="font-black text-teal-700">10%</span>
+                  </div>
+                  <input type="range" id="ratio-ethnic" min="0" max="100" value="10" oninput="window.pyUpdateGenreRatio('ethnic')" class="w-full accent-teal-500 cursor-pointer h-1.5 bg-teal-200/80 rounded-lg">
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold py-3.5 px-4 rounded-2xl shadow-lg shadow-emerald-600/25 transition transform active:scale-[0.98] flex items-center justify-center gap-2 text-sm cursor-pointer">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>献立を自動作成する</span>
+            </button>
+          </form>
+        </div>
+      </aside>
+
+      <!-- RIGHT COLUMN: Output Dashboard -->
+      <section class="lg:col-span-8 space-y-6">
+        
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-2xl p-1.5 shadow-sm border border-slate-200/80 flex items-center gap-1">
+          <button id="tab-btn-plan" onclick="window.pySwitchTab('plan')" class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-2 bg-emerald-500 text-white shadow-sm">
+            <i class="fa-regular fa-calendar-check"></i>
+            <span>週間献立カレンダー</span>
+          </button>
+          <button id="tab-btn-shopping" onclick="window.pySwitchTab('shopping')" class="flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-100">
+            <i class="fa-solid fa-basket-shopping"></i>
+            <span>まとめ買いリスト</span>
+          </button>
+        </div>
+
+        <!-- TAB 1: Menu Plan View -->
+        <div id="content-plan" class="space-y-6">
+          
+          <!-- Summary Bar -->
+          <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4 w-full sm:w-auto justify-around sm:justify-start">
+              <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">合計推定調理時間</span>
+                <span id="summary-total-time" class="text-base font-extrabold text-slate-800">-- 分</span>
+              </div>
+              <div class="h-8 w-px bg-slate-200"></div>
+              <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">平均カロリー/日</span>
+                <span id="summary-avg-cal" class="text-base font-extrabold text-slate-800">-- kcal</span>
+              </div>
+              <div class="h-8 w-px bg-slate-200"></div>
+              <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">品目総数</span>
+                <span id="summary-total-dishes" class="text-base font-extrabold text-slate-800">-- 品</span>
+              </div>
+            </div>
+            
+            <!-- Genre breakdown mini bar -->
+            <div id="summary-genre-bar" class="w-full sm:w-48 space-y-1"></div>
+          </div>
+
+          <!-- Cards Container -->
+          <div id="plan-cards-container" class="space-y-6">
+            <!-- Dynamic Python Content Injection -->
+          </div>
+
+        </div>
+
+        <!-- TAB 2: Shopping List View -->
+        <div id="content-shopping" class="hidden space-y-6">
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+              <div>
+                <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                  <i class="fa-solid fa-basket-shopping text-emerald-600"></i>
+                  まとめ買いリスト
+                </h2>
+                <p id="shopping-subtitle" class="text-xs text-slate-500 mt-1">作成した献立に必要な食材を自動集計・分量換算済み</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="flex items-center gap-2 cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-800 px-3 py-2 rounded-xl text-xs font-bold transition border border-amber-200">
+                  <input type="checkbox" id="toggle-hide-checked" onchange="window.pyRenderShoppingList()" class="w-4 h-4 text-amber-600 rounded">
+                  <span><i class="fa-solid fa-eye-slash mr-1"></i>家にある食材（チェック済）を隠す</span>
+                </label>
+                <button onclick="window.pyCopyShoppingList()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-regular fa-copy"></i>
+                  <span>テキストコピー</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Categories Container -->
+            <div id="shopping-categories-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Dynamic Content -->
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Toast & Interactivity Utility -->
+  <script>
+    function showToast(message, icon = 'fa-check') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 transition transform translate-y-4 opacity-0 pointer-events-auto';
+      toast.innerHTML = `<i class="fa-solid ${icon} text-emerald-400"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-4', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function toggleChip(btn, type) {
+      const name = btn.getAttribute("data-name");
+      const isCurrentlyActive = btn.classList.contains("is-active");
+
+      if (!isCurrentlyActive) {
+        const oppositeType = (type === 'preferred') ? 'disliked' : 'preferred';
+        const parentContainer = btn.closest('.chip-group-container') || document;
+        const oppositeBtn = parentContainer.querySelector(`.chip-item.chip-${oppositeType}[data-name="${name}"]`);
+        
+        if (oppositeBtn && oppositeBtn.classList.contains('is-active')) {
+          oppositeBtn.classList.remove('is-active');
+          oppositeBtn.className = `chip-item chip-${oppositeType} px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px] cursor-pointer`;
+        }
+
+        btn.classList.add('is-active');
+        if (type === 'preferred') {
+          btn.className = "chip-item chip-preferred is-active px-2 py-0.5 rounded-md font-bold bg-emerald-500 text-white shadow-sm transition text-[11px] cursor-pointer";
+        } else {
+          btn.className = "chip-item chip-disliked is-active px-2 py-0.5 rounded-md font-bold bg-rose-500 text-white line-through shadow-sm transition text-[11px] cursor-pointer";
+        }
+      } else {
+        btn.classList.remove('is-active');
+        btn.className = `chip-item chip-${type} px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition text-[11px] cursor-pointer`;
+      }
+
+      if (window.pyRenderPlan) {
+        window.pyRenderPlan();
+      }
+    }
+    window.toggleChip = toggleChip;
+  </script>
+
+  <!-- PYSCRIPT ENGINE CODE -->
+  <script type="py">
+import random
+from js import document, window, setTimeout
+from pyodide.ffi import create_proxy
+
+def show_toast(message, icon="fa-check"):
+    window.showToast(message, icon)
+
+# ==========================================
+# 1. RECIPE DATABASE (Main, Side, Soup)
+# ==========================================
+
+MAIN_DISHES = [
+    {
+        "id": "m01", "name": "豚しゃぶとたっぷり薬味のおろしポン酢", "genre": "和食", "category": "main",
+        "time": 20, "calories": 380, "tags": ["さっぱり", "時短", "定番"],
+        "ingredients": [
+            {"name": "豚薄切り肉 (しゃぶしゃぶ用)", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "大根", "qty": 100, "unit": "g", "category": "野菜"},
+            {"name": "大葉", "qty": 4, "unit": "枚", "category": "野菜"},
+            {"name": "みょうが", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "ポン酢", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m02", "name": "鰆の塩焼き すだち・大根おろし添え", "genre": "和食", "category": "main",
+        "time": 20, "calories": 340, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "鰆 (サワラ) 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "大根", "qty": 80, "unit": "g", "category": "野菜"},
+            {"name": "すだち", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "塩", "qty": 0.5, "unit": "小さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m03", "name": "冷やしおろしぶっかけうどん", "genre": "和食", "category": "main",
+        "time": 15, "calories": 420, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "冷凍うどん", "qty": 2, "unit": "玉", "category": "加工食品"},
+            {"name": "大根", "qty": 120, "unit": "g", "category": "野菜"},
+            {"name": "温泉卵", "qty": 2, "unit": "個", "category": "卵・乳製品"},
+            {"name": "めんつゆ (3倍濃縮)", "qty": 4, "unit": "大さじ", "category": "調味料"},
+            {"name": "長ネギ", "qty": 0.5, "unit": "本", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m04", "name": "本格 棒棒鶏 (バンバンジー)", "genre": "中華", "category": "main",
+        "time": 25, "calories": 390, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "鶏むね肉", "qty": 1, "unit": "枚(250g)", "category": "肉類"},
+            {"name": "きゅうり", "qty": 1, "unit": "本", "category": "野菜"},
+            {"name": "長ネギ", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "練りごま・醤油・酢・砂糖", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m05", "name": "白身魚とあさりのアクアパッツァ", "genre": "洋食", "category": "main",
+        "time": 25, "calories": 320, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "白身魚 (鱈や鯛)", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "あさり (砂抜き済)", "qty": 150, "unit": "g", "category": "魚介類"},
+            {"name": "ミニトマト", "qty": 8, "unit": "個", "category": "野菜"},
+            {"name": "オリーブオイル・白ワイン", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m06", "name": "大葉香る 和風たらこバターパスタ", "genre": "洋食", "category": "main",
+        "time": 15, "calories": 520, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "スパゲティ", "qty": 200, "unit": "g", "category": "加工食品"},
+            {"name": "たらこ (または明太子)", "qty": 2, "unit": "腹", "category": "魚介類"},
+            {"name": "バター", "qty": 20, "unit": "g", "category": "卵・乳製品"},
+            {"name": "大葉", "qty": 6, "unit": "枚", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m07", "name": "鮭の香ばしいバター醤油ソテー", "genre": "洋食", "category": "main",
+        "time": 20, "calories": 450, "tags": ["定番"],
+        "ingredients": [
+            {"name": "生鮭 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "バター", "qty": 15, "unit": "g", "category": "卵・乳製品"},
+            {"name": "醤油", "qty": 1, "unit": "大さじ", "category": "調味料"},
+            {"name": "しめじ", "qty": 0.5, "unit": "パック", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m08", "name": "カオマンガイ (しっとり海南鶏飯)", "genre": "エスニック", "category": "main",
+        "time": 30, "calories": 510, "tags": ["さっぱり", "ガッツリ"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 1, "unit": "枚", "category": "肉類"},
+            {"name": "お米", "qty": 2, "unit": "合", "category": "穀物"},
+            {"name": "生姜・ニンニク", "qty": 1, "unit": "かけ", "category": "野菜"},
+            {"name": "ナンプラー・醤油・レモン汁", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m09", "name": "ジューシーハンバーグ デミグラスソース", "genre": "洋食", "category": "main",
+        "time": 35, "calories": 580, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "合挽き肉", "qty": 250, "unit": "g", "category": "肉類"},
+            {"name": "玉ねぎ", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "パン粉・牛乳", "qty": 3, "unit": "大さじ", "category": "加工食品"},
+            {"name": "デミグラスソース缶", "qty": 0.5, "unit": "缶", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m10", "name": "柔らか豚の角煮", "genre": "和食", "category": "main",
+        "time": 50, "calories": 620, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "豚バラブロック肉", "qty": 350, "unit": "g", "category": "肉類"},
+            {"name": "長ネギ", "qty": 1, "unit": "本", "category": "野菜"},
+            {"name": "生姜", "qty": 1, "unit": "かけ", "category": "野菜"},
+            {"name": "醤油・酒・みりん・砂糖", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m11", "name": "ガツンと美味しい 豚の生姜焼き", "genre": "和食", "category": "main",
+        "time": 20, "calories": 510, "tags": ["定番", "ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "豚ロース薄切り肉", "qty": 250, "unit": "g", "category": "肉類"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "すりおろし生姜", "qty": 1, "unit": "大さじ", "category": "野菜"},
+            {"name": "醤油・酒・みりん", "qty": 1.5, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m12", "name": "具だくさん ゴーヤーチャンプルー", "genre": "和食", "category": "main",
+        "time": 20, "calories": 430, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "ゴーヤー", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "木綿豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"},
+            {"name": "豚バラ肉", "qty": 100, "unit": "g", "category": "肉類"},
+            {"name": "卵", "qty": 2, "unit": "個", "category": "卵・乳製品"}
+        ]
+    },
+    {
+        "id": "m13", "name": "本格 旨辛麻婆豆腐", "genre": "中華", "category": "main",
+        "time": 20, "calories": 480, "tags": ["ガッツリ", "定番", "時短"],
+        "ingredients": [
+            {"name": "木綿豆腐", "qty": 1, "unit": "丁", "category": "加工食品"},
+            {"name": "豚ひき肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "長ネギ・ニンニク・生姜", "qty": 1, "unit": "適量", "category": "野菜"},
+            {"name": "豆板醤・甜麺醤・鶏ガラスープ", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m14", "name": "黒酢で作る さっぱり酢豚", "genre": "中華", "category": "main",
+        "time": 30, "calories": 530, "tags": ["定番", "ガッツリ", "さっぱり"],
+        "ingredients": [
+            {"name": "豚角切り肉", "qty": 200, "unit": "g", "category": "肉類"},
+            {"name": "玉ねぎ・ピーマン・人参", "qty": 1, "unit": "個ずつ", "category": "野菜"},
+            {"name": "黒酢・醤油・砂糖・ケチャップ", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m15", "name": "サクサク エビフライ タルタルソース", "genre": "洋食", "category": "main",
+        "time": 30, "calories": 560, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "殻付きエビ", "qty": 8, "unit": "尾", "category": "魚介類"},
+            {"name": "小麦粉・卵・パン粉", "qty": 1, "unit": "適量", "category": "加工食品"},
+            {"name": "ゆで卵・マヨネーズ・玉ねぎ", "qty": 1, "unit": "適量", "category": "卵・乳製品"}
+        ]
+    },
+    {
+        "id": "m16", "name": "サクサクジューシー 鶏の唐揚げ", "genre": "和食", "category": "main",
+        "time": 25, "calories": 540, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 300, "unit": "g", "category": "肉類"},
+            {"name": "醤油・酒・生姜", "qty": 1.5, "unit": "大さじ", "category": "調味料"},
+            {"name": "片栗粉", "qty": 3, "unit": "大さじ", "category": "加工食品"}
+        ]
+    },
+    {
+        "id": "m17", "name": "ふっくら 鯖の味噌煮", "genre": "和食", "category": "main",
+        "time": 25, "calories": 420, "tags": ["定番"],
+        "ingredients": [
+            {"name": "鯖 (サバ) 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "生姜", "qty": 1, "unit": "かけ", "category": "野菜"},
+            {"name": "味噌・みりん・酒・砂糖", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m18", "name": "旨味染み込む ほっこり肉じゃが", "genre": "和食", "category": "main",
+        "time": 30, "calories": 460, "tags": ["定番"],
+        "ingredients": [
+            {"name": "牛薄切り肉 (または豚肉)", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "じゃがいも", "qty": 2, "unit": "個", "category": "野菜"},
+            {"name": "玉ねぎ", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "人参", "qty": 0.5, "unit": "本", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m19", "name": "タルタルたっぷり 絶品チキン南蛮", "genre": "和食", "category": "main",
+        "time": 30, "calories": 610, "tags": ["ガッツリ", "定番"],
+        "ingredients": [
+            {"name": "鶏むね肉 (またはもも肉)", "qty": 300, "unit": "g", "category": "肉類"},
+            {"name": "甘酢 (醤油・酢・砂糖)", "qty": 2, "unit": "大さじ", "category": "調味料"},
+            {"name": "ゆで卵・マヨネーズ", "qty": 1, "unit": "適量", "category": "卵・乳製品"}
+        ]
+    },
+    {
+        "id": "m20", "name": "ジューシー ピーマンの肉詰め", "genre": "和食", "category": "main",
+        "time": 25, "calories": 440, "tags": ["定番"],
+        "ingredients": [
+            {"name": "ピーマン", "qty": 4, "unit": "個", "category": "野菜"},
+            {"name": "合挽き肉", "qty": 200, "unit": "g", "category": "肉類"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m21", "name": "とろ〜り半熟卵の 親子丼", "genre": "和食", "category": "main",
+        "time": 15, "calories": 530, "tags": ["定番", "時短"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "卵", "qty": 2, "unit": "個", "category": "卵・乳製品"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "めんつゆ", "qty": 3, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m22", "name": "こんがり香ばしい 鶏の照り焼き", "genre": "和食", "category": "main",
+        "time": 20, "calories": 490, "tags": ["定番", "時短"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 250, "unit": "g", "category": "肉類"},
+            {"name": "醤油・みりん・酒・砂糖", "qty": 1.5, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m23", "name": "甘辛割り下の ごちそうすき焼き", "genre": "和食", "category": "main",
+        "time": 30, "calories": 650, "tags": ["ガッツリ", "定番"],
+        "ingredients": [
+            {"name": "牛薄切り肉", "qty": 250, "unit": "g", "category": "肉類"},
+            {"name": "焼き豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"},
+            {"name": "長ネギ", "qty": 1, "unit": "本", "category": "野菜"},
+            {"name": "しらたき", "qty": 100, "unit": "g", "category": "加工食品"}
+        ]
+    },
+    {
+        "id": "m24", "name": "脂の乗った ぶりの照り焼き", "genre": "和食", "category": "main",
+        "time": 20, "calories": 460, "tags": ["定番"],
+        "ingredients": [
+            {"name": "ぶり 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "醤油・みりん・酒・砂糖", "qty": 1.5, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m25", "name": "ココナッツ香る 本格グリーンカレー", "genre": "エスニック", "category": "main",
+        "time": 25, "calories": 570, "tags": ["ガッツリ"],
+        "ingredients": [
+            {"name": "鶏むね肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "なす", "qty": 1, "unit": "本", "category": "野菜"},
+            {"name": "グリーンカレーペースト", "qty": 1, "unit": "パック", "category": "調味料"},
+            {"name": "ココナッツミルク", "qty": 200, "unit": "ml", "category": "加工食品"}
+        ]
+    },
+    {
+        "id": "m26", "name": "厚切りサクサク とんかつ", "genre": "和食", "category": "main",
+        "time": 30, "calories": 680, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "豚ロース肉 (とんかつ用)", "qty": 2, "unit": "枚", "category": "肉類"},
+            {"name": "小麦粉・卵・パン粉", "qty": 1, "unit": "適量", "category": "加工食品"},
+            {"name": "キャベツ", "qty": 100, "unit": "g", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m27", "name": "ゴロゴロ具材の おうちカレーライス", "genre": "洋食", "category": "main",
+        "time": 40, "calories": 650, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "豚肉 (または牛肉)", "qty": 200, "unit": "g", "category": "肉類"},
+            {"name": "じゃがいも", "qty": 2, "unit": "個", "category": "野菜"},
+            {"name": "玉ねぎ", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "人参", "qty": 1, "unit": "本", "category": "野菜"},
+            {"name": "カレールー", "qty": 0.5, "unit": "箱", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m28", "name": "とろ〜り玉子の 特製オムライス", "genre": "洋食", "category": "main",
+        "time": 20, "calories": 590, "tags": ["定番", "時短"],
+        "ingredients": [
+            {"name": "卵", "qty": 3, "unit": "個", "category": "卵・乳製品"},
+            {"name": "鶏肉", "qty": 80, "unit": "g", "category": "肉類"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "ケチャップ", "qty": 3, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m29", "name": "具だくさん 濃厚ミートソースパスタ", "genre": "洋食", "category": "main",
+        "time": 25, "calories": 560, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "スパゲティ", "qty": 200, "unit": "g", "category": "加工食品"},
+            {"name": "合挽き肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "カットトマト缶", "qty": 0.5, "unit": "缶", "category": "加工食品"}
+        ]
+    },
+    {
+        "id": "m30", "name": "パリッと香ばしい 羽根つき餃子", "genre": "中華", "category": "main",
+        "time": 30, "calories": 520, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "餃子の皮", "qty": 20, "unit": "枚", "category": "加工食品"},
+            {"name": "豚ひき肉", "qty": 180, "unit": "g", "category": "肉類"},
+            {"name": "キャベツ (または白菜)", "qty": 150, "unit": "g", "category": "野菜"},
+            {"name": "ニラ", "qty": 0.5, "unit": "束", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m31", "name": "シャキシャキ野菜の 回鍋肉 (ホイコーロー)", "genre": "中華", "category": "main",
+        "time": 15, "calories": 540, "tags": ["定番", "ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "豚バラ薄切り肉", "qty": 180, "unit": "g", "category": "肉類"},
+            {"name": "キャベツ", "qty": 200, "unit": "g", "category": "野菜"},
+            {"name": "ピーマン", "qty": 2, "unit": "個", "category": "野菜"},
+            {"name": "甜麺醤・豆板醤", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m32", "name": "ピーマンと豚肉の 青椒肉絲 (チンジャオロース)", "genre": "中華", "category": "main",
+        "time": 20, "calories": 470, "tags": ["定番", "時短"],
+        "ingredients": [
+            {"name": "豚肉 (または牛肉)", "qty": 180, "unit": "g", "category": "肉類"},
+            {"name": "ピーマン", "qty": 4, "unit": "個", "category": "野菜"},
+            {"name": "たけのこ水煮", "qty": 80, "unit": "g", "category": "野菜"},
+            {"name": "オイスターソース", "qty": 1.5, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m33", "name": "ぷりぷりエビの 特製エビチリ", "genre": "中華", "category": "main",
+        "time": 20, "calories": 430, "tags": ["定番", "ガッツリ"],
+        "ingredients": [
+            {"name": "むきエビ", "qty": 12, "unit": "尾", "category": "魚介類"},
+            {"name": "長ネギ", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "ケチャップ・豆板醤", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m34", "name": "ほっこり温まる 濃厚クリームシチュー", "genre": "洋食", "category": "main",
+        "time": 35, "calories": 510, "tags": ["定番"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "じゃがいも", "qty": 2, "unit": "個", "category": "野菜"},
+            {"name": "人参・玉ねぎ", "qty": 1, "unit": "個ずつ", "category": "野菜"},
+            {"name": "シチュールー・牛乳", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m35", "name": "あつあつとろ〜り えびマカロニグラタン", "genre": "洋食", "category": "main",
+        "time": 30, "calories": 530, "tags": ["定番"],
+        "ingredients": [
+            {"name": "マカロニ", "qty": 100, "unit": "g", "category": "加工食品"},
+            {"name": "むきエビ", "qty": 8, "unit": "尾", "category": "魚介類"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "ピザ用チーズ", "qty": 50, "unit": "g", "category": "卵・乳製品"}
+        ]
+    },
+    {
+        "id": "m36", "name": "ガパオライス (バジル炒めご飯)", "genre": "エスニック", "category": "main",
+        "time": 20, "calories": 530, "tags": ["ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "豚ひき肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "パプリカ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "バジル", "qty": 10, "unit": "枚", "category": "野菜"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "ナンプラー・オイスターソース", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m37", "name": "サクサクジューシー 油淋鶏 (ユーリンチー)", "genre": "中華", "category": "main",
+        "time": 25, "calories": 580, "tags": ["ガッツリ", "定番"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 250, "unit": "g", "category": "肉類"},
+            {"name": "長ネギ", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "醤油・酢・砂糖・ごま油", "qty": 1, "unit": "適量", "category": "調味料"},
+            {"name": "片栗粉", "qty": 2, "unit": "大さじ", "category": "加工食品"}
+        ]
+    },
+    {
+        "id": "m38", "name": "サクサク アジフライ タルタル添え", "genre": "和食", "category": "main",
+        "time": 25, "calories": 480, "tags": ["定番"],
+        "ingredients": [
+            {"name": "アジ (開き)", "qty": 2, "unit": "尾", "category": "魚介類"},
+            {"name": "小麦粉・卵・パン粉", "qty": 1, "unit": "適量", "category": "加工食品"},
+            {"name": "キャベツ", "qty": 80, "unit": "g", "category": "野菜"},
+            {"name": "タルタルソース", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m39", "name": "味染み ぶり大根", "genre": "和食", "category": "main",
+        "time": 35, "calories": 420, "tags": ["定番"],
+        "ingredients": [
+            {"name": "ぶり 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "大根", "qty": 200, "unit": "g", "category": "野菜"},
+            {"name": "生姜", "qty": 1, "unit": "かけ", "category": "野菜"},
+            {"name": "醤油・みりん・酒・砂糖", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m40", "name": "旨辛 麻婆茄子 (マーボーナス)", "genre": "中華", "category": "main",
+        "time": 20, "calories": 490, "tags": ["ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "なす", "qty": 2, "unit": "本", "category": "野菜"},
+            {"name": "豚ひき肉", "qty": 120, "unit": "g", "category": "肉類"},
+            {"name": "長ネギ・生姜", "qty": 1, "unit": "適量", "category": "野菜"},
+            {"name": "豆板醤・甜麺醤", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m41", "name": "チキンソテー フレッシュトマトソース", "genre": "洋食", "category": "main",
+        "time": 20, "calories": 460, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "鶏もも肉", "qty": 250, "unit": "g", "category": "肉類"},
+            {"name": "トマト", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "オリーブオイル・ニンニク", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m42", "name": "スパイシー タコライス", "genre": "エスニック", "category": "main",
+        "time": 15, "calories": 510, "tags": ["時短", "ガッツリ"],
+        "ingredients": [
+            {"name": "合挽き肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "レタス", "qty": 2, "unit": "枚", "category": "野菜"},
+            {"name": "トマト", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "ピザ用チーズ", "qty": 30, "unit": "g", "category": "卵・乳製品"},
+            {"name": "ケチャップ・ウスターソース", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m43", "name": "カレイのやさしい煮付け", "genre": "和食", "category": "main",
+        "time": 20, "calories": 310, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "カレイ 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "生姜", "qty": 1, "unit": "かけ", "category": "野菜"},
+            {"name": "醤油・みりん・酒", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m44", "name": "さばの塩焼き すだち添え", "genre": "和食", "category": "main",
+        "time": 15, "calories": 320, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "さば 切り身", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "すだち", "qty": 1, "unit": "個", "category": "野菜"},
+            {"name": "大根", "qty": 60, "unit": "g", "category": "野菜"}
+        ]
+    },
+    {
+        "id": "m45", "name": "鶏むね肉と彩り野菜の甘酢あん", "genre": "和食", "category": "main",
+        "time": 25, "calories": 420, "tags": ["定番", "さっぱり"],
+        "ingredients": [
+            {"name": "鶏むね肉", "qty": 200, "unit": "g", "category": "肉類"},
+            {"name": "パプリカ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "ピーマン", "qty": 2, "unit": "個", "category": "野菜"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "黒酢・醤油・砂糖", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m46", "name": "アジと彩り野菜の和風南蛮漬け", "genre": "和食", "category": "main",
+        "time": 25, "calories": 360, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "アジ (小)", "qty": 4, "unit": "尾", "category": "魚介類"},
+            {"name": "玉ねぎ", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "人参", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "酢・醤油・砂糖", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m47", "name": "豆腐ハンバーグ 和風おろしタレ", "genre": "和食", "category": "main",
+        "time": 25, "calories": 380, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "木綿豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"},
+            {"name": "鶏ひき肉", "qty": 150, "unit": "g", "category": "肉類"},
+            {"name": "大根", "qty": 80, "unit": "g", "category": "野菜"},
+            {"name": "ポン酢", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m48", "name": "白身魚のレモンハーブソテー", "genre": "洋食", "category": "main",
+        "time": 15, "calories": 310, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "白身魚 (鱈や鯛)", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "レモン汁", "qty": 1, "unit": "大さじ", "category": "調味料"},
+            {"name": "オリーブオイル・バター", "qty": 1, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m49", "name": "海鮮とアボカドのジェノベーゼパスタ", "genre": "洋食", "category": "main",
+        "time": 20, "calories": 510, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "スパゲティ", "qty": 200, "unit": "g", "category": "加工食品"},
+            {"name": "むきエビ", "qty": 8, "unit": "尾", "category": "魚介類"},
+            {"name": "アボカド", "qty": 0.5, "unit": "個", "category": "野菜"},
+            {"name": "バジルペースト・オリーブオイル", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m50", "name": "レンジで簡単！豚キムチ炒め", "genre": "中華", "category": "main",
+        "time": 10, "calories": 450, "tags": ["ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "豚バラ薄切り肉", "qty": 180, "unit": "g", "category": "肉類"},
+            {"name": "白菜キムチ", "qty": 100, "unit": "g", "category": "加工食品"},
+            {"name": "ニラ", "qty": 0.5, "unit": "束", "category": "野菜"},
+            {"name": "ごま油", "qty": 1, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m51", "name": "エビとイカのアジアン塩炒め", "genre": "エスニック", "category": "main",
+        "time": 15, "calories": 380, "tags": ["ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "むきエビ", "qty": 8, "unit": "尾", "category": "魚介類"},
+            {"name": "イカ (輪切り)", "qty": 100, "unit": "g", "category": "魚介類"},
+            {"name": "ブロッコリー", "qty": 0.5, "unit": "株", "category": "野菜"},
+            {"name": "ナンプラー・ニンニク", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m52", "name": "白身魚の梅紫蘇蒸し", "genre": "和食", "category": "main",
+        "time": 15, "calories": 280, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "白身魚 (鱈や鯛)", "qty": 2, "unit": "切れ", "category": "魚介類"},
+            {"name": "梅干し", "qty": 2, "unit": "個", "category": "加工食品"},
+            {"name": "大葉", "qty": 4, "unit": "枚", "category": "野菜"},
+            {"name": "酒・ポン酢", "qty": 1, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m53", "name": "豆腐と海鮮の和風あんかけ", "genre": "和食", "category": "main",
+        "time": 20, "calories": 340, "tags": ["さっぱり", "定番"],
+        "ingredients": [
+            {"name": "絹ごし豆腐", "qty": 1, "unit": "丁", "category": "加工食品"},
+            {"name": "むきエビ", "qty": 8, "unit": "尾", "category": "魚介類"},
+            {"name": "しめじ", "qty": 0.5, "unit": "パック", "category": "野菜"},
+            {"name": "和風だし・めんつゆ", "qty": 2, "unit": "大さじ", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m54", "name": "特製 よだれ鶏 (口水鶏)", "genre": "中華", "category": "main",
+        "time": 20, "calories": 390, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "鶏むね肉", "qty": 1, "unit": "枚", "category": "肉類"},
+            {"name": "長ネギ", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "醤油・酢・ラー油・ごま油", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m55", "name": "海老とふわふわ卵の塩炒め", "genre": "中華", "category": "main",
+        "time": 15, "calories": 360, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "むきエビ", "qty": 10, "unit": "尾", "category": "魚介類"},
+            {"name": "卵", "qty": 3, "unit": "個", "category": "卵・乳製品"},
+            {"name": "長ネギ", "qty": 0.5, "unit": "本", "category": "野菜"},
+            {"name": "鶏ガラスープ・塩", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m56", "name": "台湾風 ルーローハン (魯肉飯)", "genre": "中華", "category": "main",
+        "time": 30, "calories": 590, "tags": ["ガッツリ", "定番"],
+        "ingredients": [
+            {"name": "豚バラ肉", "qty": 200, "unit": "g", "category": "肉類"},
+            {"name": "ゆで卵", "qty": 2, "unit": "個", "category": "卵・乳製品"},
+            {"name": "生姜・フライドオニオン", "qty": 1, "unit": "適量", "category": "野菜"},
+            {"name": "醤油・五香粉・砂糖", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m57", "name": "パッタイ (タイ風海鮮焼きビーフン)", "genre": "エスニック", "category": "main",
+        "time": 20, "calories": 480, "tags": ["さっぱり", "時短"],
+        "ingredients": [
+            {"name": "ビーフン (またはフォー)", "qty": 150, "unit": "g", "category": "加工食品"},
+            {"name": "むきエビ", "qty": 8, "unit": "尾", "category": "魚介類"},
+            {"name": "もやし", "qty": 0.5, "unit": "袋", "category": "野菜"},
+            {"name": "ニラ", "qty": 0.5, "unit": "束", "category": "野菜"},
+            {"name": "ナンプラー・オイスターソース・レモン汁", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    },
+    {
+        "id": "m58", "name": "スパイシー シーフードナシゴレン", "genre": "エスニック", "category": "main",
+        "time": 20, "calories": 520, "tags": ["ガッツリ", "時短"],
+        "ingredients": [
+            {"name": "シーフードミックス", "qty": 120, "unit": "g", "category": "魚介類"},
+            {"name": "お米", "qty": 2, "unit": "合", "category": "穀物"},
+            {"name": "目玉焼き", "qty": 2, "unit": "個", "category": "卵・乳製品"},
+            {"name": "ナンプラー・オイスターソース・チリペースト", "qty": 1, "unit": "適量", "category": "調味料"}
+        ]
+    }
+]
+
+SIDE_DISHES = [
+    {"id": "s01", "name": "シャキシャキ和風味噌和えサラダ", "genre": "和食", "category": "side", "time": 10, "calories": 80, "tags": ["時短", "さっぱり"], "ingredients": [{"name": "水菜", "qty": 50, "unit": "g", "category": "野菜"}]},
+    {"id": "s02", "name": "特製ポテトサラダ", "genre": "洋食", "category": "side", "time": 20, "calories": 180, "tags": ["定番"], "ingredients": [{"name": "じゃがいも", "qty": 2, "unit": "個", "category": "野菜"}]},
+    {"id": "s03", "name": "きゅうりとワカメの酢の物", "genre": "和食", "category": "side", "time": 10, "calories": 45, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "きゅうり", "qty": 1, "unit": "本", "category": "野菜"}]},
+    {"id": "s04", "name": "小松菜のおひたし", "genre": "和食", "category": "side", "time": 10, "calories": 50, "tags": ["さっぱり", "時短", "定番"], "ingredients": [{"name": "小松菜", "qty": 1, "unit": "束", "category": "野菜"}]},
+    {"id": "s05", "name": "トマトとモッツァレラのカプレーゼ", "genre": "洋食", "category": "side", "time": 10, "calories": 150, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "トマト", "qty": 1, "unit": "個", "category": "野菜"}]},
+    {"id": "s06", "name": "もやしとナムルのピリ辛和え", "genre": "中華", "category": "side", "time": 10, "calories": 70, "tags": ["時短", "ガッツリ"], "ingredients": [{"name": "もやし", "qty": 1, "unit": "袋", "category": "野菜"}]},
+    {"id": "s07", "name": "きんぴらごぼう", "genre": "和食", "category": "side", "time": 20, "calories": 120, "tags": ["定番"], "ingredients": [{"name": "ごぼう", "qty": 0.5, "unit": "本", "category": "野菜"}]},
+    {"id": "s08", "name": "かぼちゃの甘煮", "genre": "和食", "category": "side", "time": 20, "calories": 140, "tags": ["定番"], "ingredients": [{"name": "かぼちゃ", "qty": 200, "unit": "g", "category": "野菜"}]},
+    {"id": "s09", "name": "キャロットラペ", "genre": "洋食", "category": "side", "time": 15, "calories": 90, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "人参", "qty": 1, "unit": "本", "category": "野菜"}]},
+    {"id": "s10", "name": "ブロッコリーのガーリックソテー", "genre": "洋食", "category": "side", "time": 10, "calories": 110, "tags": ["ガッツリ", "時短"], "ingredients": [{"name": "ブロッコリー", "qty": 0.5, "unit": "株", "category": "野菜"}]},
+    {"id": "s11", "name": "アジアン春雨サラダ", "genre": "エスニック", "category": "side", "time": 15, "calories": 130, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "緑豆春雨", "qty": 40, "unit": "g", "category": "加工食品"}]},
+    {"id": "s12", "name": "ほうれん草のごま和え", "genre": "和食", "category": "side", "time": 10, "calories": 75, "tags": ["定番", "時短"], "ingredients": [{"name": "ほうれん草", "qty": 1, "unit": "束", "category": "野菜"}]},
+    {"id": "s13", "name": "ひじきと大豆の煮物", "genre": "和食", "category": "side", "time": 25, "calories": 110, "tags": ["定番"], "ingredients": [{"name": "乾燥ひじき", "qty": 15, "unit": "g", "category": "加工食品"}]},
+    {"id": "s14", "name": "たたききゅうりの塩昆布和え", "genre": "和食", "category": "side", "time": 5, "calories": 40, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "きゅうり", "qty": 2, "unit": "本", "category": "野菜"}]},
+    {"id": "s15", "name": "やみつき無限キャベツ", "genre": "和食", "category": "side", "time": 10, "calories": 95, "tags": ["時短", "ガッツリ"], "ingredients": [{"name": "キャベツ", "qty": 150, "unit": "g", "category": "野菜"}]},
+    {"id": "s16", "name": "なすの揚げ浸し 生姜風味", "genre": "和食", "category": "side", "time": 20, "calories": 130, "tags": ["さっぱり"], "ingredients": [{"name": "なす", "qty": 2, "unit": "本", "category": "野菜"}]},
+    {"id": "s17", "name": "ちくわとピーマンのきんぴら", "genre": "和食", "category": "side", "time": 15, "calories": 100, "tags": ["時短"], "ingredients": [{"name": "ピーマン", "qty": 3, "unit": "個", "category": "野菜"}]},
+    {"id": "s18", "name": "トマトと大葉のポン酢和え", "genre": "和食", "category": "side", "time": 5, "calories": 50, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "トマト", "qty": 1, "unit": "個", "category": "野菜"}]},
+    {"id": "s19", "name": "シャキシャキ大根とツナの和風サラダ", "genre": "和食", "category": "side", "time": 10, "calories": 105, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "大根", "qty": 100, "unit": "g", "category": "野菜"}, {"name": "ツナ缶", "qty": 0.5, "unit": "缶", "category": "魚介類"}]},
+    {"id": "s20", "name": "ほうれん草とベーコンのソテー", "genre": "洋食", "category": "side", "time": 10, "calories": 140, "tags": ["時短", "定番"], "ingredients": [{"name": "ほうれん草", "qty": 1, "unit": "束", "category": "野菜"}]},
+    {"id": "s21", "name": "小松菜と油揚げのお手軽煮浸し", "genre": "和食", "category": "side", "time": 15, "calories": 80, "tags": ["定番"], "ingredients": [{"name": "小松菜", "qty": 1, "unit": "束", "category": "野菜"}]},
+    {"id": "s22", "name": "ザーサイと長ネギのピリ辛和え", "genre": "中華", "category": "side", "time": 5, "calories": 60, "tags": ["時短"], "ingredients": [{"name": "ザーサイ", "qty": 40, "unit": "g", "category": "加工食品"}]},
+    {"id": "s23", "name": "きゅうりと中華クラゲの甘酢和え", "genre": "中華", "category": "side", "time": 10, "calories": 70, "tags": ["さっぱり"], "ingredients": [{"name": "きゅうり", "qty": 1, "unit": "本", "category": "野菜"}]},
+    {"id": "s24", "name": "アボカドとエビの濃厚マヨサラダ", "genre": "洋食", "category": "side", "time": 15, "calories": 210, "tags": ["ガッツリ"], "ingredients": [{"name": "アボカド", "qty": 1, "unit": "個", "category": "野菜"}]},
+    {"id": "s25", "name": "レンジで速攻 無限ピーマン", "genre": "和食", "category": "side", "time": 10, "calories": 90, "tags": ["時短", "定番"], "ingredients": [{"name": "ピーマン", "qty": 4, "unit": "個", "category": "野菜"}]},
+    {"id": "s26", "name": "ふんわり出汁が溢れる だし巻き卵", "genre": "和食", "category": "side", "time": 10, "calories": 120, "tags": ["定番", "時短"], "ingredients": [{"name": "卵", "qty": 3, "unit": "個", "category": "卵・乳製品"}]},
+    {"id": "s27", "name": "切り干し大根のやさしい煮物", "genre": "和食", "category": "side", "time": 20, "calories": 85, "tags": ["定番", "さっぱり"], "ingredients": [{"name": "切り干し大根", "qty": 30, "unit": "g", "category": "加工食品"}]},
+    {"id": "s28", "name": "外カリ中ふわ 揚げ出し豆腐", "genre": "和食", "category": "side", "time": 15, "calories": 140, "tags": ["定番", "さっぱり"], "ingredients": [{"name": "木綿豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"}]},
+    {"id": "s29", "name": "甘辛炒め にんじんしりしり", "genre": "和食", "category": "side", "time": 10, "calories": 95, "tags": ["時短", "定番"], "ingredients": [{"name": "人参", "qty": 1, "unit": "本", "category": "野菜"}, {"name": "卵", "qty": 1, "unit": "個", "category": "卵・乳製品"}]},
+    {"id": "s30", "name": "たっぷりコーンのシーザーサラダ", "genre": "洋食", "category": "side", "time": 10, "calories": 130, "tags": ["定番", "時短"], "ingredients": [{"name": "レタス", "qty": 2, "unit": "枚", "category": "野菜"}, {"name": "コーン缶", "qty": 3, "unit": "大さじ", "category": "加工食品"}]},
+    {"id": "s31", "name": "ちくわの磯辺揚げ", "genre": "和食", "category": "side", "time": 10, "calories": 130, "tags": ["定番", "時短"], "ingredients": [{"name": "ちくわ", "qty": 3, "unit": "本", "category": "加工食品"}]},
+    {"id": "s32", "name": "昔ながらの マカロニサラダ", "genre": "洋食", "category": "side", "time": 15, "calories": 160, "tags": ["定番"], "ingredients": [{"name": "マカロニ", "qty": 50, "unit": "g", "category": "加工食品"}, {"name": "きゅうり", "qty": 0.5, "unit": "本", "category": "野菜"}]},
+    {"id": "s33", "name": "叩き長芋の梅昆布和え", "genre": "和食", "category": "side", "time": 5, "calories": 60, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "長芋", "qty": 100, "unit": "g", "category": "野菜"}, {"name": "梅干し", "qty": 1, "unit": "個", "category": "加工食品"}]},
+    {"id": "s34", "name": "パリパリ具だくさん 春巻き", "genre": "中華", "category": "side", "time": 25, "calories": 190, "tags": ["定番", "ガッツリ"], "ingredients": [{"name": "春巻きの皮", "qty": 4, "unit": "枚", "category": "加工食品"}, {"name": "豚ひき肉", "qty": 50, "unit": "g", "category": "肉類"}]},
+    {"id": "s35", "name": "ブロッコリーとゆで卵のデリ風サラダ", "genre": "洋食", "category": "side", "time": 10, "calories": 170, "tags": ["定番", "時短"], "ingredients": [{"name": "ブロッコリー", "qty": 0.5, "unit": "株", "category": "野菜"}, {"name": "ゆで卵", "qty": 2, "unit": "個", "category": "卵・乳製品"}]},
+    {"id": "s36", "name": "里芋のそぼろ煮", "genre": "和食", "category": "side", "time": 20, "calories": 130, "tags": ["定番"], "ingredients": [{"name": "里芋", "qty": 150, "unit": "g", "category": "野菜"}, {"name": "鶏ひき肉", "qty": 50, "unit": "g", "category": "肉類"}]},
+    {"id": "s37", "name": "ちくわと小松菜のカラシ醤油和え", "genre": "和食", "category": "side", "time": 10, "calories": 65, "tags": ["時短", "さっぱり"], "ingredients": [{"name": "小松菜", "qty": 1, "unit": "束", "category": "野菜"}, {"name": "ちくわ", "qty": 2, "unit": "本", "category": "加工食品"}]},
+    {"id": "s38", "name": "ナスとパプリカのラタトゥイユ", "genre": "洋食", "category": "side", "time": 20, "calories": 110, "tags": ["さっぱり", "定番"], "ingredients": [{"name": "なす", "qty": 1, "unit": "本", "category": "野菜"}, {"name": "パプリカ", "qty": 0.5, "unit": "個", "category": "野菜"}, {"name": "カットトマト缶", "qty": 0.5, "unit": "缶", "category": "加工食品"}]},
+    {"id": "s39", "name": "タコとブロッコリーのガーリックマリネ", "genre": "洋食", "category": "side", "time": 10, "calories": 140, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "ゆでタコ", "qty": 80, "unit": "g", "category": "魚介類"}, {"name": "ブロッコリー", "qty": 0.5, "unit": "株", "category": "野菜"}]},
+    {"id": "s40", "name": "ザーサイと豆腐のピリ辛和え", "genre": "中華", "category": "side", "time": 5, "calories": 80, "tags": ["時短", "さっぱり"], "ingredients": [{"name": "絹ごし豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"}, {"name": "ザーサイ", "qty": 30, "unit": "g", "category": "加工食品"}]},
+    {"id": "s41", "name": "パクチーとエビの生春巻き", "genre": "エスニック", "category": "side", "time": 15, "calories": 110, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "ライスペーパー", "qty": 4, "unit": "枚", "category": "加工食品"}, {"name": "むきエビ", "qty": 6, "unit": "尾", "category": "魚介類"}, {"name": "パクチー", "qty": 15, "unit": "g", "category": "野菜"}]},
+    {"id": "s42", "name": "たたききゅうりのピリ辛中華和え", "genre": "中華", "category": "side", "time": 5, "calories": 55, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "きゅうり", "qty": 2, "unit": "本", "category": "野菜"}, {"name": "ごま油・醤油・ラー油", "qty": 1, "unit": "大さじ", "category": "調味料"}]},
+    {"id": "s43", "name": "蒸しナスのアジアンナンプラー和え", "genre": "エスニック", "category": "side", "time": 10, "calories": 75, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "なす", "qty": 2, "unit": "本", "category": "野菜"}, {"name": "ナンプラー・レモン汁・生姜", "qty": 1, "unit": "大さじ", "category": "調味料"}]}
+]
+
+SOUP_DISHES = [
+    {"id": "p01", "name": "ほっこり具だくさん豚汁", "genre": "和食", "category": "soup", "time": 25, "calories": 220, "tags": ["ガッツリ", "定番"], "ingredients": [{"name": "豚バラ肉", "qty": 60, "unit": "g", "category": "肉類"}]},
+    {"id": "p02", "name": "豆腐とわかめのお味噌汁", "genre": "和食", "category": "soup", "time": 10, "calories": 70, "tags": ["定番", "時短"], "ingredients": [{"name": "豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"}]},
+    {"id": "p03", "name": "ふわふわ和風 かきたま汁", "genre": "和食", "category": "soup", "time": 10, "calories": 85, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "卵", "qty": 2, "unit": "個", "category": "卵・乳製品"}]},
+    {"id": "p04", "name": "旨味染み込む あさりの潮汁", "genre": "和食", "category": "soup", "time": 15, "calories": 60, "tags": ["さっぱり"], "ingredients": [{"name": "あさり", "qty": 120, "unit": "g", "category": "魚介類"}]},
+    {"id": "p05", "name": "トマト香る 具だくさんミネストローネ", "genre": "洋食", "category": "soup", "time": 25, "calories": 140, "tags": ["さっぱり", "定番"], "ingredients": [{"name": "カットトマト缶", "qty": 0.5, "unit": "缶", "category": "加工食品"}]},
+    {"id": "p06", "name": "濃厚とろ〜り コーンポタージュ", "genre": "洋食", "category": "soup", "time": 15, "calories": 160, "tags": ["定番", "ガッツリ"], "ingredients": [{"name": "コーンクリーム缶", "qty": 1, "unit": "缶", "category": "加工食品"}]},
+    {"id": "p07", "name": "ピリ辛旨辛 本格スンドゥブチゲ", "genre": "エスニック", "category": "soup", "time": 20, "calories": 210, "tags": ["ガッツリ"], "ingredients": [{"name": "絹ごし豆腐", "qty": 1, "unit": "丁", "category": "加工食品"}]},
+    {"id": "p08", "name": "ごま油香る 中華風わかめスープ", "genre": "中華", "category": "soup", "time": 10, "calories": 65, "tags": ["時短"], "ingredients": [{"name": "乾燥わかめ", "qty": 5, "unit": "g", "category": "加工食品"}]},
+    {"id": "p09", "name": "つるりと美味しい なめこの赤だし", "genre": "和食", "category": "soup", "time": 10, "calories": 55, "tags": ["定番", "さっぱり"], "ingredients": [{"name": "なめこ", "qty": 1, "unit": "袋", "category": "野菜"}]},
+    {"id": "p10", "name": "じっくり炒め玉ねぎの オニオンスープ", "genre": "洋食", "category": "soup", "time": 25, "calories": 110, "tags": ["定番"], "ingredients": [{"name": "玉ねぎ", "qty": 1, "unit": "個", "category": "野菜"}]},
+    {"id": "p11", "name": "ほくほく優しい かぼちゃポタージュ", "genre": "洋食", "category": "soup", "time": 20, "calories": 150, "tags": ["定番"], "ingredients": [{"name": "かぼちゃ", "qty": 150, "unit": "g", "category": "野菜"}]},
+    {"id": "p12", "name": "魚介の旨味たっぷり クラムチャウダー", "genre": "洋食", "category": "soup", "time": 25, "calories": 230, "tags": ["ガッツリ", "定番"], "ingredients": [{"name": "シーフードミックス", "qty": 100, "unit": "g", "category": "魚介類"}]},
+    {"id": "p13", "name": "酸味と辛味が癖になる サンラータン", "genre": "中華", "category": "soup", "time": 15, "calories": 95, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"}]},
+    {"id": "p14", "name": "ほっとする 大根と油揚げの味噌汁", "genre": "和食", "category": "soup", "time": 15, "calories": 75, "tags": ["定番"], "ingredients": [{"name": "大根", "qty": 60, "unit": "g", "category": "野菜"}]},
+    {"id": "p15", "name": "爽やかスパイシー トムヤムスープ", "genre": "エスニック", "category": "soup", "time": 20, "calories": 130, "tags": ["さっぱり"], "ingredients": [{"name": "むきエビ", "qty": 6, "unit": "尾", "category": "魚介類"}]},
+    {"id": "p16", "name": "豚肉とニラのスタミナキムチスープ", "genre": "エスニック", "category": "soup", "time": 15, "calories": 180, "tags": ["ガッツリ", "時短"], "ingredients": [{"name": "豚バラ肉", "qty": 50, "unit": "g", "category": "肉類"}]},
+    {"id": "p17", "name": "鶏肉と長ねぎのとろみ白湯スープ", "genre": "中華", "category": "soup", "time": 20, "calories": 160, "tags": ["ガッツリ", "定番"], "ingredients": [{"name": "鶏もも肉", "qty": 80, "unit": "g", "category": "肉類"}]},
+    {"id": "p18", "name": "キャベツとツナのあっさり和風スープ", "genre": "和食", "category": "soup", "time": 10, "calories": 90, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "キャベツ", "qty": 100, "unit": "g", "category": "野菜"}]},
+    {"id": "p19", "name": "きくらげと玉子の中華とろみスープ", "genre": "中華", "category": "soup", "time": 10, "calories": 80, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "乾燥きくらげ", "qty": 5, "unit": "g", "category": "野菜"}, {"name": "卵", "qty": 1, "unit": "個", "category": "卵・乳製品"}]},
+    {"id": "p20", "name": "じゃがいもと玉ねぎの具だくさんコンソメスープ", "genre": "洋食", "category": "soup", "time": 20, "calories": 120, "tags": ["定番"], "ingredients": [{"name": "じゃがいも", "qty": 1, "unit": "個", "category": "野菜"}]},
+    {"id": "p21", "name": "たっぷりきのこの和風お吸い物", "genre": "和食", "category": "soup", "time": 10, "calories": 45, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "しめじ", "qty": 0.5, "unit": "パック", "category": "野菜"}]},
+    {"id": "p22", "name": "もやしとキムチの辛味旨辣スープ", "genre": "中華", "category": "soup", "time": 10, "calories": 95, "tags": ["ガッツリ", "時短"], "ingredients": [{"name": "もやし", "qty": 0.5, "unit": "袋", "category": "野菜"}]},
+    {"id": "p23", "name": "ブロッコリーとエビの濃厚ミルクスープ", "genre": "洋食", "category": "soup", "time": 20, "calories": 190, "tags": ["ガッツリ"], "ingredients": [{"name": "ブロッコリー", "qty": 0.5, "unit": "株", "category": "野菜"}]},
+    {"id": "p24", "name": "叩ききゅうりと麩の冷製さっぱりお吸い物", "genre": "和食", "category": "soup", "time": 10, "calories": 40, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "きゅうり", "qty": 1, "unit": "本", "category": "野菜"}, {"name": "麩", "qty": 4, "unit": "個", "category": "加工食品"}]},
+    {"id": "p25", "name": "アサリとレモングラスのエスニックスープ", "genre": "エスニック", "category": "soup", "time": 15, "calories": 90, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "あさり", "qty": 100, "unit": "g", "category": "魚介類"}, {"name": "レモン汁・ナンプラー", "qty": 1, "unit": "大さじ", "category": "調味料"}]},
+    {"id": "p26", "name": "野菜たっぷり 根菜けんちん汁", "genre": "和食", "category": "soup", "time": 20, "calories": 100, "tags": ["定番", "さっぱり"], "ingredients": [{"name": "ごぼう", "qty": 0.5, "unit": "本", "category": "野菜"}, {"name": "大根", "qty": 50, "unit": "g", "category": "野菜"}]},
+    {"id": "p27", "name": "シャキシャキもやしと胡麻の 中華スープ", "genre": "中華", "category": "soup", "time": 10, "calories": 60, "tags": ["時短", "さっぱり"], "ingredients": [{"name": "もやし", "qty": 0.5, "unit": "袋", "category": "野菜"}]},
+    {"id": "p28", "name": "魚介のダシ香る スパイシーチゲスープ", "genre": "エスニック", "category": "soup", "time": 15, "calories": 130, "tags": ["ガッツリ"], "ingredients": [{"name": "アサリ (またはシーフード)", "qty": 80, "unit": "g", "category": "魚介類"}]},
+    {"id": "p29", "name": "ふんわり玉子とワカメの コンソメスープ", "genre": "洋食", "category": "soup", "time": 10, "calories": 75, "tags": ["時短", "定番"], "ingredients": [{"name": "卵", "qty": 1, "unit": "個", "category": "卵・乳製品"}]},
+    {"id": "p30", "name": "濃厚えびの ビスク風スープ", "genre": "洋食", "category": "soup", "time": 20, "calories": 170, "tags": ["ガッツリ"], "ingredients": [{"name": "むきエビ", "qty": 6, "unit": "尾", "category": "魚介類"}]},
+    {"id": "p31", "name": "ゴロゴロ野菜の 具だくさんポトフ", "genre": "洋食", "category": "soup", "time": 25, "calories": 180, "tags": ["定番"], "ingredients": [{"name": "ウインナー", "qty": 4, "unit": "本", "category": "肉類"}, {"name": "キャベツ", "qty": 100, "unit": "g", "category": "野菜"}]},
+    {"id": "p32", "name": "身体に優しい しじみの味噌汁", "genre": "和食", "category": "soup", "time": 10, "calories": 50, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "しじみ", "qty": 100, "unit": "g", "category": "魚介類"}]},
+    {"id": "p33", "name": "えのきと油揚げのすまし汁", "genre": "和食", "category": "soup", "time": 10, "calories": 55, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "えのき", "qty": 0.5, "unit": "パック", "category": "野菜"}, {"name": "油揚げ", "qty": 0.5, "unit": "枚", "category": "加工食品"}]},
+    {"id": "p34", "name": "ぷるぷる水餃子の スープ餃子", "genre": "中華", "category": "soup", "time": 15, "calories": 190, "tags": ["ガッツリ", "時短"], "ingredients": [{"name": "冷凍水餃子", "qty": 6, "unit": "個", "category": "加工食品"}, {"name": "白菜", "qty": 80, "unit": "g", "category": "野菜"}]},
+    {"id": "p35", "name": "鶏肉とココナッツのタイ風スープ (トムカーガイ)", "genre": "エスニック", "category": "soup", "time": 20, "calories": 200, "tags": ["さっぱり"], "ingredients": [{"name": "鶏むね肉", "qty": 60, "unit": "g", "category": "肉類"}]},
+    {"id": "p36", "name": "具だくさん 粕汁 (かすじる)", "genre": "和食", "category": "soup", "time": 25, "calories": 210, "tags": ["定番", "ガッツリ"], "ingredients": [{"name": "生鮭 切り身", "qty": 1, "unit": "切れ", "category": "魚介類"}, {"name": "酒粕", "qty": 40, "unit": "g", "category": "調味料"}, {"name": "大根", "qty": 50, "unit": "g", "category": "野菜"}]},
+    {"id": "p37", "name": "なすと油揚げの合わせ味噌汁", "genre": "和食", "category": "soup", "time": 10, "calories": 80, "tags": ["定番"], "ingredients": [{"name": "なす", "qty": 1, "unit": "本", "category": "野菜"}, {"name": "油揚げ", "qty": 0.5, "unit": "枚", "category": "加工食品"}]},
+    {"id": "p38", "name": "玉ねぎとチーズのオニオングラタンスープ", "genre": "洋食", "category": "soup", "time": 20, "calories": 190, "tags": ["ガッツリ", "定番"], "ingredients": [{"name": "玉ねぎ", "qty": 1, "unit": "個", "category": "野菜"}, {"name": "ピザ用チーズ", "qty": 30, "unit": "g", "category": "卵・乳製品"}]},
+    {"id": "p39", "name": "春雨とワンタンの満足中華スープ", "genre": "中華", "category": "soup", "time": 15, "calories": 160, "tags": ["ガッツリ", "時短"], "ingredients": [{"name": "ワンタン", "qty": 4, "unit": "個", "category": "加工食品"}, {"name": "緑豆春雨", "qty": 20, "unit": "g", "category": "加工食品"}]},
+    {"id": "p40", "name": "パクチーと豆腐のタイ風クリアスープ", "genre": "エスニック", "category": "soup", "time": 10, "calories": 75, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "絹ごし豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"}, {"name": "パクチー", "qty": 10, "unit": "g", "category": "野菜"}]},
+    {"id": "p41", "name": "エビと春雨のアジアンナンプラースープ", "genre": "エスニック", "category": "soup", "time": 15, "calories": 110, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "むきエビ", "qty": 6, "unit": "尾", "category": "魚介類"}, {"name": "緑豆春雨", "qty": 20, "unit": "g", "category": "加工食品"}, {"name": "ナンプラー", "qty": 1, "unit": "大さじ", "category": "調味料"}]},
+    {"id": "p42", "name": "ザーサイと豆腐の中華スープ", "genre": "中華", "category": "soup", "time": 10, "calories": 70, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "絹ごし豆腐", "qty": 0.5, "unit": "丁", "category": "加工食品"}, {"name": "ザーサイ", "qty": 30, "unit": "g", "category": "加工食品"}, {"name": "ごま油・鶏ガラスープ", "qty": 1, "unit": "適量", "category": "調味料"}]},
+    {"id": "p43", "name": "ふわふわ玉子の中華かきたまスープ", "genre": "中華", "category": "soup", "time": 10, "calories": 80, "tags": ["定番", "時短"], "ingredients": [{"name": "卵", "qty": 2, "unit": "個", "category": "卵・乳製品"}, {"name": "人参", "qty": 30, "unit": "g", "category": "野菜"}, {"name": "鶏ガラスープ・醤油", "qty": 1, "unit": "適量", "category": "調味料"}]},
+    {"id": "p44", "name": "アジアンフォー風 もやしと鶏肉のスープ", "genre": "エスニック", "category": "soup", "time": 15, "calories": 110, "tags": ["さっぱり", "時短"], "ingredients": [{"name": "鶏むね肉", "qty": 60, "unit": "g", "category": "肉類"}, {"name": "もやし", "qty": 0.5, "unit": "袋", "category": "野菜"}, {"name": "ナンプラー・レモン汁", "qty": 1, "unit": "大さじ", "category": "調味料"}]}
+]
+
+# State Variables
+CURRENT_PLAN = []
+HIDDEN_ITEMS = set()
+CHECKED_INGREDIENTS = set()
+
+# ==========================================
+# 2. LOGIC FUNCTIONS
+# ==========================================
+
+def get_preference_settings():
+    use_pref_el = document.getElementById("use-ingredient-pref")
+    if use_pref_el and not use_pref_el.checked:
+        return [], []
+    
+    pref_nodes = document.querySelectorAll(".chip-preferred.is-active")
+    dislike_nodes = document.querySelectorAll(".chip-disliked.is-active")
+    
+    preferred = [node.getAttribute("data-name") for node in pref_nodes]
+    disliked = [node.getAttribute("data-name") for node in dislike_nodes]
+    return preferred, disliked
+
+def get_weighted_genre(genre_ratios):
+    genres = ["和食", "洋食", "中華", "エスニック"]
+    weights = [genre_ratios.get(g, 25) for g in genres]
+    if sum(weights) == 0:
+        return random.choice(genres)
+    return random.choices(genres, weights=weights, k=1)[0]
+
+def pick_recipe(category_list, preferred_genre, mood_tag="all", exclude_ids=None, preferred_ing=None, disliked_ing=None, strict_genre=False):
+    if exclude_ids is None:
+        exclude_ids = set()
+    if preferred_ing is None:
+        preferred_ing = []
+    if disliked_ing is None:
+        disliked_ing = []
+    
+    candidates = []
+    for r in category_list:
+        if r["id"] in exclude_ids:
+            continue
+        
+        is_disliked = False
+        r_name = r["name"]
+        ing_names = [ing["name"] for ing in r.get("ingredients", [])]
+        all_ing_str = r_name + " " + " ".join(ing_names)
+        
+        for dis in disliked_ing:
+            if dis in all_ing_str:
+                is_disliked = True
+                break
+        
+        if not is_disliked:
+            candidates.append(r)
+            
+    if not candidates:
+        candidates = [r for r in category_list if r["id"] not in exclude_ids]
+    if not candidates:
+        candidates = category_list
+
+    if strict_genre or preferred_genre:
+        matched_genre_candidates = [r for r in candidates if r["genre"] == preferred_genre]
+        if matched_genre_candidates:
+            candidates = matched_genre_candidates
+
+    scored = []
+    for r in candidates:
+        score = 10
+        if r["genre"] == preferred_genre:
+            score += 20
+        if mood_tag != "all" and mood_tag in r.get("tags", []):
+            score += 35
+            
+        r_name = r["name"]
+        ing_names = [ing["name"] for ing in r.get("ingredients", [])]
+        all_ing_str = r_name + " " + " ".join(ing_names)
+        for pref in preferred_ing:
+            if pref in all_ing_str:
+                score += 40
+                
+        scored.append((r, score))
+    
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top_candidates = scored[:max(3, len(scored)//2)]
+    recipes = [x[0] for x in top_candidates]
+    weights = [x[1] for x in top_candidates]
+    return random.choices(recipes, weights=weights, k=1)[0]
+
+def py_generate_plan():
+    global CURRENT_PLAN, HIDDEN_ITEMS
+    HIDDEN_ITEMS.clear()
+    
+    days_val = int(document.getElementById("days").value)
+    mood_tag = document.getElementById("mood-tag").value
+    
+    use_ratio_el = document.getElementById("use-genre-ratio")
+    if use_ratio_el and use_ratio_el.checked:
+        j_ratio = int(document.getElementById("ratio-japanese").value)
+        w_ratio = int(document.getElementById("ratio-western").value)
+        c_ratio = int(document.getElementById("ratio-chinese").value)
+        e_ratio = int(document.getElementById("ratio-ethnic").value)
+    else:
+        j_ratio = 25
+        w_ratio = 25
+        c_ratio = 25
+        e_ratio = 25
+    
+    genre_ratios = {"和食": j_ratio, "洋食": w_ratio, "中華": c_ratio, "エスニック": e_ratio}
+    preferred_ing, disliked_ing = get_preference_settings()
+
+    used_main_ids = set()
+    used_side_ids = set()
+    used_soup_ids = set()
+    
+    new_plan = []
+    has_mood_tag_included = False
+
+    for day in range(1, days_val + 1):
+        target_genre = get_weighted_genre(genre_ratios)
+        
+        main = pick_recipe(MAIN_DISHES, target_genre, mood_tag, used_main_ids, preferred_ing, disliked_ing, strict_genre=True)
+        used_main_ids.add(main["id"])
+        
+        main_genre = main["genre"]
+        
+        side = pick_recipe(SIDE_DISHES, target_genre, mood_tag, used_side_ids, preferred_ing, disliked_ing)
+        used_side_ids.add(side["id"])
+
+        is_soup_omitted = (main["id"] == "m03")
+        soup = None
+        if not is_soup_omitted:
+            soup = pick_recipe(SOUP_DISHES, main_genre, mood_tag, used_soup_ids, preferred_ing, disliked_ing, strict_genre=True)
+            used_soup_ids.add(soup["id"])
+
+        if mood_tag != "all":
+            if (mood_tag in main.get("tags", [])) or (mood_tag in side.get("tags", [])) or (soup and mood_tag in soup.get("tags", [])):
+                has_mood_tag_included = True
+
+        new_plan.append({
+            "day": day,
+            "genre": main_genre,
+            "main": main,
+            "side": side,
+            "soup": soup
+        })
+
+    if mood_tag != "all" and not has_mood_tag_included and new_plan:
+        tagged_mains = [m for m in MAIN_DISHES if mood_tag in m.get("tags", [])]
+        if tagged_mains:
+            force_main = random.choice(tagged_mains)
+            new_plan[0]["main"] = force_main
+            new_plan[0]["genre"] = force_main["genre"]
+            if new_plan[0]["soup"]:
+                new_plan[0]["soup"] = pick_recipe(SOUP_DISHES, force_main["genre"], mood_tag, set(), preferred_ing, disliked_ing, strict_genre=True)
+
+    CURRENT_PLAN = new_plan
+    py_render_plan()
+    py_render_shopping_list()
+    show_toast("条件に合わせて献立を作成しました！", "fa-sparkles")
+
+def py_render_plan():
+    container = document.getElementById("plan-cards-container")
+    container.innerHTML = ""
+    
+    if not CURRENT_PLAN:
+        container.innerHTML = """
+        <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80 text-center space-y-4 my-4">
+          <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-lg font-bold text-slate-800">条件を入力してください</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">左側のパネルで日数・人数・好みなどを設定し、「献立を自動作成する」ボタンを押すと最適な献立が作成されます。</p>
+          </div>
+        </div>
+        """
+        document.getElementById("summary-total-time").innerText = "-- 分"
+        document.getElementById("summary-avg-cal").innerText = "-- kcal"
+        document.getElementById("summary-total-dishes").innerText = "0 品"
+        document.getElementById("summary-genre-bar").innerHTML = '<div class="text-[11px] text-slate-400 text-center py-1">ジャンル未選択</div>'
+        return
+
+    tot_time = 0
+    tot_cal = 0
+    tot_dishes = 0
+    genre_counts = {"和食": 0, "洋食": 0, "中華": 0, "エスニック": 0}
+
+    genre_badge_colors = {
+        "和食": "bg-emerald-100 text-emerald-800 border-emerald-300",
+        "洋食": "bg-amber-100 text-amber-800 border-amber-300",
+        "中華": "bg-rose-100 text-rose-800 border-rose-300",
+        "エスニック": "bg-teal-100 text-teal-800 border-teal-300"
+    }
+
+    preferred_ing, _ = get_preference_settings()
+
+    for idx, item in enumerate(CURRENT_PLAN):
+        day_num = item["day"]
+        day_genre = item["genre"]
+        genre_counts[day_genre] = genre_counts.get(day_genre, 0) + 1
+        
+        main = item["main"]
+        side = item["side"]
+        soup = item["soup"]
+
+        day_time = 0
+        day_cal = 0
+        
+        def render_dish_card(dish, cat_type, cat_label, icon_class):
+            nonlocal day_time, day_cal, tot_dishes
+            if not dish:
+                return f"""
+                <div class="p-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-400 flex flex-col justify-center items-center min-h-[140px]">
+                  <span class="font-bold text-slate-500"><i class="fa-solid fa-ban mr-1"></i>汁物なし</span>
+                  <span class="text-[10px] text-slate-400 mt-0.5">(冷やし麺等)</span>
+                </div>
+                """
+            
+            key = f"{idx}_{cat_type}"
+            is_hidden = key in HIDDEN_ITEMS
+            
+            if not is_hidden:
+                time_val = dish["time"] + (10 if cat_type == "main" else 0)
+                day_time = max(day_time, time_val)
+                day_cal += dish["calories"]
+                tot_dishes += 1
+
+            tags_html = "".join([f'<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold">#{t}</span>' for t in dish.get("tags", [])])
+
+            pref_badge_html = ""
+            if preferred_ing:
+                r_name = dish["name"]
+                ing_names = [ing["name"] for ing in dish.get("ingredients", [])]
+                all_ing_str = r_name + " " + " ".join(ing_names)
+                matched = [p for p in preferred_ing if p in all_ing_str]
+                if matched:
+                    pref_badge_html = f'<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-extrabold border border-emerald-300"><i class="fa-solid fa-heart mr-0.5 text-rose-500"></i> {", ".join(matched)}入り</span>'
+
+            card_style = "opacity-50 grayscale bg-slate-100" if is_hidden else "bg-white"
+            hide_icon = "fa-eye" if is_hidden else "fa-eye-slash"
+            hide_text = "復元" if is_hidden else "非表示"
+
+            return f"""
+            <div class="{card_style} p-4 rounded-2xl border border-slate-200/80 shadow-sm transition duration-200 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="text-[11px] font-extrabold text-slate-400 flex items-center gap-1">
+                    <i class="fa-solid {icon_class} text-emerald-500"></i> {cat_label}
+                  </span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="window.pyChangeSingleItem({idx}, '{cat_type}')" class="text-xs bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 px-2 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer">
+                      <i class="fa-solid fa-rotate text-[10px]"></i> チェンジ
+                    </button>
+                    <button onclick="window.pyToggleHideItem({idx}, '{cat_type}')" class="text-xs bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 px-2 py-1 rounded-lg transition cursor-pointer" title="{hide_text}">
+                      <i class="fa-solid {hide_icon}"></i>
+                    </button>
+                  </div>
+                </div>
+                <h4 class="font-extrabold text-sm text-slate-800 leading-snug mb-1">{dish['name']}</h4>
+                <div class="flex flex-wrap gap-1 mb-3">{pref_badge_html}{tags_html}</div>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100 font-bold">
+                <span><i class="fa-regular fa-clock mr-1"></i>{dish['time']}分</span>
+                <span><i class="fa-solid fa-fire mr-1"></i>{dish['calories']} kcal</span>
+              </div>
+            </div>
+            """
+
+        main_html = render_dish_card(main, "main", "主菜", "fa-bowl-rice")
+        side_html = render_dish_card(side, "side", "副菜", "fa-carrot")
+        soup_html = render_dish_card(soup, "soup", "汁物", "fa-mug-hot")
+
+        tot_time += day_time
+        tot_cal += day_cal
+
+        badge_cls = genre_badge_colors.get(day_genre, "bg-slate-100 text-slate-700")
+
+        card_day_html = f"""
+        <div class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-xl bg-slate-900 text-white font-extrabold text-sm flex items-center justify-center shadow-md">
+                {day_num}
+              </span>
+              <h3 class="font-black text-base text-slate-800">Day {day_num} 献立</h3>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border {badge_cls}">{day_genre}</span>
+            </div>
+            <div class="text-xs font-bold text-slate-500 flex items-center gap-3">
+              <span><i class="fa-regular fa-clock mr-1"></i>目安 {day_time}分</span>
+              <span><i class="fa-solid fa-fire mr-1"></i>計 {day_cal} kcal</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {main_html}
+            {side_html}
+            {soup_html}
+          </div>
+        </div>
+        """
+        container.innerHTML += card_day_html
+
+    document.getElementById("summary-total-time").innerText = f"{tot_time} 分"
+    avg_cal = int(tot_cal / max(len(CURRENT_PLAN), 1))
+    document.getElementById("summary-avg-cal").innerText = f"{avg_cal} kcal"
+    document.getElementById("summary-total-dishes").innerText = f"{tot_dishes} 品"
+
+    bar_el = document.getElementById("summary-genre-bar")
+    bar_html = ""
+    genre_clrs = {"和食": "bg-emerald-500", "洋食": "bg-amber-500", "中華": "bg-rose-500", "エスニック": "bg-teal-500"}
+    tot_days = len(CURRENT_PLAN)
+    for g_name, count in genre_counts.items():
+        pct = int((count / max(tot_days, 1)) * 100)
+        clr = genre_clrs.get(g_name, "bg-slate-400")
+        bar_html += f"""
+        <div>
+          <div class="flex justify-between text-[11px] font-bold mb-0.5 text-slate-600">
+            <span>{g_name}</span>
+            <span>{count}日 ({pct}%)</span>
+          </div>
+          <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div class="{clr} h-full transition-all duration-300" style="width: {pct}%"></div>
+          </div>
+        </div>
+        """
+    bar_el.innerHTML = bar_html
+
+def py_change_single_item(day_idx, category):
+    if day_idx >= len(CURRENT_PLAN):
+        return
+    
+    day_data = CURRENT_PLAN[day_idx]
+    current_dish = day_data.get(category)
+    exclude_ids = {current_dish["id"]} if current_dish else set()
+    
+    mood_tag = document.getElementById("mood-tag").value
+    preferred_ing, disliked_ing = get_preference_settings()
+    target_genre = day_data["genre"]
+
+    if category == "main":
+        new_main = pick_recipe(MAIN_DISHES, target_genre, mood_tag, exclude_ids, preferred_ing, disliked_ing, strict_genre=False)
+        day_data["main"] = new_main
+        day_data["genre"] = new_main["genre"]
+        
+        # 汁物省略メニュー（冷やしうどん等）への切り替え・復帰の連動制御
+        if new_main["id"] == "m03":
+            day_data["soup"] = None
+        elif day_data["soup"] is None:
+            day_data["soup"] = pick_recipe(SOUP_DISHES, new_main["genre"], mood_tag, set(), preferred_ing, disliked_ing, strict_genre=True)
+
+    elif category == "side":
+        new_dish = pick_recipe(SIDE_DISHES, target_genre, mood_tag, exclude_ids, preferred_ing, disliked_ing, strict_genre=False)
+        day_data["side"] = new_dish
+
+    elif category == "soup":
+        new_dish = pick_recipe(SOUP_DISHES, target_genre, mood_tag, exclude_ids, preferred_ing, disliked_ing, strict_genre=False)
+        day_data["soup"] = new_dish
+
+    py_render_plan()
+    py_render_shopping_list()
+    show_toast("料理を入れ替えました", "fa-rotate")
+
+def py_toggle_hide_item(day_idx, category):
+    key = f"{day_idx}_{category}"
+    if key in HIDDEN_ITEMS:
+        HIDDEN_ITEMS.remove(key)
+        show_toast("料理を非表示解除しました", "fa-eye")
+    else:
+        HIDDEN_ITEMS.add(key)
+        show_toast("料理を非表示にしました", "fa-eye-slash")
+    
+    py_render_plan()
+    py_render_shopping_list()
+
+def py_render_shopping_list():
+    container = document.getElementById("shopping-categories-container")
+    container.innerHTML = ""
+
+    if not CURRENT_PLAN:
+        container.innerHTML = """
+        <div class="col-span-full bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-2">
+          <i class="fa-solid fa-basket-shopping text-slate-300 text-3xl"></i>
+          <p class="text-xs font-bold text-slate-500">献立が作成されていません</p>
+          <p class="text-[11px] text-slate-400">献立を作成すると、必要な食材のまとめ買いリストがここに自動計算されます。</p>
+        </div>
+        """
+        return
+
+    servings = int(document.getElementById("servings").value)
+    hide_checked = document.getElementById("toggle-hide-checked").checked
+
+    cat_map = {}
+
+    for day_idx, day in enumerate(CURRENT_PLAN):
+        for cat in ["main", "side", "soup"]:
+            key = f"{day_idx}_{cat}"
+            if key in HIDDEN_ITEMS:
+                continue
+            dish = day.get(cat)
+            if not dish:
+                continue
+
+            for ing in dish.get("ingredients", []):
+                c_name = ing.get("category", "その他")
+                i_name = ing.get("name")
+                i_qty = ing.get("qty", 0) * servings
+                i_unit = ing.get("unit", "")
+
+                if c_name not in cat_map:
+                    cat_map[c_name] = {}
+                if i_name not in cat_map[c_name]:
+                    cat_map[c_name][i_name] = {"qty": 0, "unit": i_unit}
+                
+                cat_map[c_name][i_name]["qty"] += i_qty
+
+    category_icons = {
+        "肉類": "fa-drumstick-bite text-rose-500",
+        "魚介類": "fa-fish text-sky-500",
+        "野菜": "fa-carrot text-emerald-500",
+        "加工食品": "fa-box text-amber-500",
+        "卵・乳製品": "fa-egg text-yellow-500",
+        "調味料": "fa-jar text-purple-500",
+        "穀物": "fa-wheat-awn text-amber-600",
+        "その他": "fa-cubes text-slate-500"
+    }
+
+    for cat_name, items in cat_map.items():
+        icon_cls = category_icons.get(cat_name, "fa-basket-shopping text-slate-400")
+        
+        items_html = ""
+        visible_item_count = 0
+
+        for item_name, data in items.items():
+            qty_val = data["qty"]
+            qty_str = str(int(qty_val)) if qty_val == int(qty_val) else f"{qty_val:.1f}"
+            unit_str = data["unit"]
+
+            item_key = f"{cat_name}_{item_name}"
+            is_checked = item_key in CHECKED_INGREDIENTS
+
+            if hide_checked and is_checked:
+                continue
+            
+            visible_item_count += 1
+            checked_attr = "checked" if is_checked else ""
+            line_through = "line-through opacity-50" if is_checked else ""
+
+            items_html += f"""
+            <label class="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition cursor-pointer border border-transparent hover:border-slate-100">
+              <div class="flex items-center gap-3">
+                <input type="checkbox" {checked_attr} onchange="window.pyToggleCheckIngredient('{item_key}')" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                <span class="text-xs font-bold text-slate-700 {line_through}">{item_name}</span>
+              </div>
+              <span class="text-xs font-extrabold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">{qty_str} {unit_str}</span>
+            </label>
+            """
+
+        if hide_checked and visible_item_count == 0:
+            continue
+
+        cat_card = f"""
+        <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-200/60 font-black text-sm text-slate-800">
+            <i class="fa-solid {icon_cls}"></i>
+            <span>{cat_name}</span>
+          </div>
+          <div class="space-y-1">
+            {items_html}
+          </div>
+        </div>
+        """
+        container.innerHTML += cat_card
+
+def py_toggle_check_ingredient(item_key):
+    if item_key in CHECKED_INGREDIENTS:
+        CHECKED_INGREDIENTS.remove(item_key)
+    else:
+        CHECKED_INGREDIENTS.add(item_key)
+    py_render_shopping_list()
+
+def py_copy_shopping_list():
+    lines = ["【AI献立 お買い物リスト】", ""]
+    servings = int(document.getElementById("servings").value)
+    lines.append(f"人数: {servings}人分")
+    lines.append(f"日数: {len(CURRENT_PLAN)}日分")
+    lines.append("-----------------------------")
+
+    cat_map = {}
+    for day_idx, day in enumerate(CURRENT_PLAN):
+        for cat in ["main", "side", "soup"]:
+            key = f"{day_idx}_{cat}"
+            if key in HIDDEN_ITEMS:
+                continue
+            dish = day.get(cat)
+            if not dish:
+                continue
+            for ing in dish.get("ingredients", []):
+                icat = ing.get("category", "その他")
+                iname = ing.get("name")
+                iqty = ing.get("qty", 0) * servings
+                iunit = ing.get("unit", "")
+                if icat not in cat_map:
+                    cat_map[icat] = {}
+                if iname not in cat_map[icat]:
+                    cat_map[icat][iname] = {"qty": 0, "unit": iunit}
+                cat_map[icat][iname]["qty"] += iqty
+
+    for cat_name, items in cat_map.items():
+        lines.append(f"\n■ {cat_name}")
+        for item_name, data in items.items():
+            item_key = f"{cat_name}_{item_name}"
+            if item_key in CHECKED_INGREDIENTS:
+                continue
+            qty_val = data["qty"]
+            qty_str = str(int(qty_val)) if qty_val == int(qty_val) else f"{qty_val:.1f}"
+            lines.append(f"  ・ {item_name}: {qty_str}{data['unit']}")
+
+    full_text = "\n".join(lines)
+    
+    textarea = document.createElement("textarea")
+    textarea.value = full_text
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand("copy")
+    document.body.removeChild(textarea)
+    
+    show_toast("買い物リストをコピーしました！", "fa-clipboard-check")
+
+def py_switch_tab(tab_name):
+    btn_plan = document.getElementById("tab-btn-plan")
+    btn_shop = document.getElementById("tab-btn-shopping")
+    content_plan = document.getElementById("content-plan")
+    content_shop = document.getElementById("content-shopping")
+
+    if tab_name == "plan":
+        btn_plan.className = "flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-2 bg-emerald-500 text-white shadow-sm cursor-pointer"
+        btn_shop.className = "flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-100 cursor-pointer"
+        content_plan.classList.remove("hidden")
+        content_shop.classList.add("hidden")
+    else:
+        btn_shop.className = "flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-2 bg-emerald-500 text-white shadow-sm cursor-pointer"
+        btn_plan.className = "flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition flex items-center justify-center gap-2 text-slate-600 hover:bg-slate-100 cursor-pointer"
+        content_shop.classList.remove("hidden")
+        content_plan.classList.add("hidden")
+
+def py_update_genre_ratio(changed_genre):
+    genres = ["japanese", "western", "chinese", "ethnic"]
+    changed_el = document.getElementById(f"ratio-{changed_genre}")
+    if not changed_el:
+        return
+        
+    new_val = int(changed_el.value)
+    other_genres = [g for g in genres if g != changed_genre]
+    
+    other_vals = {}
+    for g in other_genres:
+        el = document.getElementById(f"ratio-{g}")
+        other_vals[g] = int(el.value) if el else 0
+        
+    other_sum = sum(other_vals.values())
+    target_other_sum = 100 - new_val
+    
+    new_ratios = {changed_genre: new_val}
+    
+    if target_other_sum <= 0:
+        for g in other_genres:
+            new_ratios[g] = 0
+    elif other_sum > 0:
+        current_allocated = 0
+        for i, g in enumerate(other_genres):
+            if i == len(other_genres) - 1:
+                val = target_other_sum - current_allocated
+            else:
+                val = round((other_vals[g] / other_sum) * target_other_sum)
+                current_allocated += val
+            new_ratios[g] = max(0, val)
+    else:
+        per_genre = target_other_sum // len(other_genres)
+        rem = target_other_sum % len(other_genres)
+        for i, g in enumerate(other_genres):
+            new_ratios[g] = per_genre + (1 if i < rem else 0)
+
+    for g in genres:
+        val = new_ratios[g]
+        slider = document.getElementById(f"ratio-{g}")
+        label = document.getElementById(f"ratio-{g}-val")
+        if slider:
+            slider.value = str(val)
+        if label:
+            label.innerText = f"{val}%"
+
+def py_reset_genre_ratios():
+    document.getElementById("ratio-japanese").value = "40"
+    document.getElementById("ratio-japanese-val").innerText = "40%"
+    document.getElementById("ratio-western").value = "30"
+    document.getElementById("ratio-western-val").innerText = "30%"
+    document.getElementById("ratio-chinese").value = "20"
+    document.getElementById("ratio-chinese-val").innerText = "20%"
+    document.getElementById("ratio-ethnic").value = "10"
+    document.getElementById("ratio-ethnic-val").innerText = "10%"
+
+# Bind Proxies to JS Window Object
+window._pyGeneratePlan = create_proxy(py_generate_plan)
+window._pySwitchTab = create_proxy(py_switch_tab)
+window._pyUpdateGenreRatio = create_proxy(py_update_genre_ratio)
+window._pyResetGenreRatios = create_proxy(py_reset_genre_ratios)
+window._pyChangeSingleItem = create_proxy(py_change_single_item)
+window._pyToggleHideItem = create_proxy(py_toggle_hide_item)
+window._pyRenderShoppingList = create_proxy(py_render_shopping_list)
+window._pyToggleCheckIngredient = create_proxy(py_toggle_check_ingredient)
+window._pyCopyShoppingList = create_proxy(py_copy_shopping_list)
+window._pyRenderPlan = create_proxy(py_render_plan)
+
+# Initial execution
+def init():
+    py_render_plan()
+    py_render_shopping_list()
+
+setTimeout(create_proxy(init), 100)
+  </script>
+</body>
+</html>
